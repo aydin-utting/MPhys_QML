@@ -87,8 +87,9 @@ def loss_avg(data, w):
     for x, y in data:
         prediction = model(x, w)
         # loss_tot += loss_single(F.softmax(prediction),y)
-        loss_tot += F.cross_entropy(prediction.view(1, 2), y[1].view(1, ))
-        Fisher += fisher(loss_single(prediction, y), w)
+        loss =  F.cross_entropy(prediction.view(1, 2), y[1].view(1, ))
+        loss_tot += loss
+        Fisher += fisher(loss,  w)
     # print(Fisher)
     return loss_tot, Fisher / n_samples
 
