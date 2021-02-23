@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import numpy as np
 import pandas as pd
+from tqdm.notebook import tqdm
 
-
-# %%
 
 def jacobian(y, x, create_graph=False):
     jac = []
@@ -33,7 +32,6 @@ def fisher(y, x):
     return torch.from_numpy(np.outer(j, j)).type(torch.DoubleTensor)
 
 
-# %%
 
 def create_data(n_samples):
     X0 = torch.tensor(np.array([[np.random.normal(loc=-1, scale=1),
@@ -56,8 +54,6 @@ def create_data(n_samples):
     data = list(zip(X, Y))
     return data
 
-
-# %%
 
 def loss_single(prediction, label):
     delta = prediction - label
@@ -87,14 +83,13 @@ def loss_avg(data, w):
     for x, y in data:
         prediction = model(x, w)
         # loss_tot += loss_single(F.softmax(prediction),y)
-        loss =  F.cross_entropy(prediction.view(1, 2), y[1].view(1, ))
+        loss = F.cross_entropy(prediction.view(1, 2), y[1].view(1, ))
         loss_tot += loss
-        Fisher += fisher(loss,  w)
+        Fisher += fisher(loss, w)
     # print(Fisher)
     return loss_tot, Fisher / n_samples
 
 
-# %%
 
 def sample_theta_for_fisher(n_iter, data, plots=False):
     EV = []
@@ -102,15 +97,15 @@ def sample_theta_for_fisher(n_iter, data, plots=False):
     Rank = []
     all_w = []
     all_fishers = []
-    for i in range(n_iter):
+    for i in tqdm(range(n_iter)):
         print('Sample ', i, end='\r')
         w = torch.tensor(np.random.uniform(size=(40,), low=-1.0, high=1.0), requires_grad=True)
         total_loss, Fisher = loss_avg(data, w)
         EV = np.append(EV, torch.eig(Fisher, eigenvectors=False, out=None)[0][:, 0].detach().numpy())
         with torch.no_grad():
             Rank.append(torch.matrix_rank(Fisher).item())
-            Fw = np.matmul(Fisher.detach().numpy(), w.detach().numpy())
-            wFw = np.dot(w.detach().numpy(), Fw)
+            Fw = np.matmul(Fisher.numpy(), w.numpy())
+            wFw = np.dot(w, Fw)
             FR.append(wFw)
             all_w.append(w)
             all_fishers.append(Fisher)
@@ -133,21 +128,13 @@ def sample_theta_for_fisher(n_iter, data, plots=False):
     return EV, FR, Rank, all_w, all_fishers
 
 
-# %% md
 
-## Calculating Effective Dimension
-
-# %%
-
-# Function to normalise Fisher informations
 def normalise_fishers(Fishers, thetas, d, V):
     num_samples = len(Fishers)
 
     TrF_integral = (1 / num_samples) * torch.sum(torch.tensor([torch.trace(F) for F in Fishers]))
     return [((d * V) / TrF_integral) * F for F in Fishers]
 
-
-# %%
 
 # Function to calculate effective dimension
 def effective_dimension(normed_fishers, n):
@@ -158,9 +145,9 @@ def effective_dimension(normed_fishers, n):
     kappa = torch.tensor([(gamma * n) / (2 * np.pi * np.log(n))])
     integral = torch.tensor([0.0])
     for F in normed_fishers:
-        det = torch.det(id + kappa * F)
         integral += torch.sqrt(torch.det(id + kappa * F))
-    integral_over_volume = integral / V_theta
+
+    integral_over_volume = integral / (V_theta * len(normed_fishers))
     numerator = torch.log(integral_over_volume)
     return 2 * numerator / torch.log(kappa)
 
