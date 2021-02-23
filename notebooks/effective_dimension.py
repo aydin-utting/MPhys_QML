@@ -30,7 +30,7 @@ def hessian(y, x):
 def fisher(y, x):
     j = jacobian(y, x, create_graph=True)
     j = j.detach().numpy()
-    return torch.from_numpy(np.outer(j, j))
+    return torch.from_numpy(np.outer(j, j)).type(torch.DoubleTensor)
 
 
 # %%
