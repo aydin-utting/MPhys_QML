@@ -102,31 +102,10 @@ def sample_theta_for_fisher(n_iter, data, plots=False):
         w = torch.tensor(np.random.uniform(size=(40,), low=-1.0, high=1.0), requires_grad=True)
         total_loss, Fisher = loss_avg(data, w)
         EV = np.append(EV, torch.eig(Fisher, eigenvectors=False, out=None)[0][:, 0].detach().numpy())
-        with torch.no_grad():
-            Rank.append(torch.matrix_rank(Fisher).item())
-            Fw = np.matmul(Fisher.numpy(), w.numpy())
-            wFw = np.dot(w, Fw)
-            FR.append(wFw)
-            all_w.append(w)
-            all_fishers.append(Fisher)
-    if plots:
-        print("Fisher")
-        x, bins, p = plt.hist(EV, bins=None, range=None)
-        for item in p:
-            item.set_height(item.get_height() / (40 * n_iter))
-        plt.ylim(0, 1)
-        plt.title("Sigmoid")
-        plt.show()
+        all_w.append(w)
+        all_fishers.append(Fisher)
 
-        plt.hist(Rank)
-        plt.title('matrix ranks for all Fisher')
-        plt.show()
-        plt.hist(FR)
-        plt.title('Fisher-Rao norm for all Fisher')
-        plt.show()
-
-    return EV, FR, Rank, all_w, all_fishers
-
+    return all_w, all_fishers
 
 
 def normalise_fishers(Fishers, thetas, d, V):
@@ -153,9 +132,32 @@ def effective_dimension(normed_fishers, n):
 
 
 # %%
-runs = 5
+import concurrent.futures
+
+data = create_data(10000)
+n_iters_tot = 10000
+num_threads = 20
+n_iters = n_iters_tot//num_threads
+
+all_w = []
+all_fishers = []
+
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    threads = [executor.submit(sample_theta_for_fisher,n_iters, data, plots=False)  for i in range(num_threads)]
+    for f in threads:
+        ws,fishers=f.result()
+        all_w+=ws
+        all_fishers+=fishers
+
+
+
+#%%
+
+'''runs = 5
 efs = pd.DataFrame(index=list(range(runs)), columns=list(range(10, 110, 10)))
 data = create_data(10000)
+
+
 for r in range(runs):
     for n_iters in range(100, 110, 10):
         EV, FR, Rank, all_w, all_fishers = sample_theta_for_fisher(n_iters, data, plots=False)
@@ -164,5 +166,4 @@ for r in range(runs):
         print('D_EFF = ', ef)
         efs.loc[r, n_iters] = ef.item()
 
-efs.to_csv('./effective_dimensions_20210219.csv')
-
+efs.to_csv('./effective_dimensions_20210219.csv')'''
