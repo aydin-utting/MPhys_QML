@@ -29,8 +29,8 @@ def hessian(y, x):
 
 def fisher(y, x):
     j = jacobian(y, x, create_graph=True)
-    with torch.no_grad():
-        return torch.from_numpy(np.outer(j.numpy(), j.numpy()))
+    j = j.detach().numpy()
+    return torch.from_numpy(np.outer(j, j))
 
 
 # %%
