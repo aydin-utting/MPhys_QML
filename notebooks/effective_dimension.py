@@ -83,7 +83,7 @@ def model(x, w):
 def loss_avg(data, w):
     n_samples = len(data)
     loss_tot = 0
-    Fisher = torch.zeros((40, 40))
+    Fisher = torch.zeros((40, 40)).type(torch.DoubleTensor)
     for x, y in data:
         prediction = model(x, w)
         # loss_tot += loss_single(F.softmax(prediction),y)
@@ -109,8 +109,8 @@ def sample_theta_for_fisher(n_iter, data, plots=False):
         EV = np.append(EV, torch.eig(Fisher, eigenvectors=False, out=None)[0][:, 0].detach().numpy())
         with torch.no_grad():
             Rank.append(torch.matrix_rank(Fisher).item())
-            Fw = np.matmul(Fisher.numpy(), w.numpy())
-            wFw = np.dot(w, Fw)
+            Fw = np.matmul(Fisher.detach().numpy(), w.detach().numpy())
+            wFw = np.dot(w.detach().numpy(), Fw)
             FR.append(wFw)
             all_w.append(w)
             all_fishers.append(Fisher)
