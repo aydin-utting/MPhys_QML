@@ -29,7 +29,7 @@ def create_data(n_samples,var):
     return data
 
 
-dev = qml.device("default.qubit", wires=4)
+dev = qml.device("default.qubit", wires=5)
 @qml.qnode(dev, diff_method='backprop')
 def quantum_neural_network(x, w):
     qml.templates.IQPEmbedding(x, wires=[0,1,2,3], n_repeats=2, pattern=None)
@@ -38,12 +38,15 @@ def quantum_neural_network(x, w):
         qml.RY(w[j][i],wires=i)
       qml.broadcast(qml.CNOT, wires=[0,1,2,3], pattern="all_to_all", parameters=None, kwargs=None)
     dev.shots = 1000
-    sample_measurements = [qml.expval(qml.PauliZ(wires=i)) for i in range(4)]
 
-    return sample_measurements
+    for i in range(4):
+        qml.CNOT(wires=[i,4])
 
 
-dev = qml.device("default.qubit", wires=4)
+    return qml.expval(qml.PauliZ(wires=4))
+
+
+dev = qml.device("default.qubit", wires=5)
 @qml.qnode(dev, diff_method='backprop')
 def easy_quantum(x, w):
     qml.templates.IQPEmbedding(x, wires=[0,1,2,3], n_repeats=2, pattern=None)
@@ -52,9 +55,10 @@ def easy_quantum(x, w):
       for i in range(4):
         qml.RY(w[j][i],wires=[i])
     dev.shots = 1000
-    sample_measurements = [qml.expval(qml.PauliZ(wires=i)) for i in range(4)]
+    for i in range(4):
+        qml.CNOT(wires=[i, 4])
 
-    return sample_measurements
+    return qml.expval(qml.PauliZ(wires=4))
 
 
 def parameter_shift_term(qnode, model, params, x, y, i, j, s):
@@ -102,48 +106,12 @@ def get_parity_prediction(model, x,w):
     else: np_measurements= easy_quantum(x,w)
 
     probability_vector=(np_measurements+1.)/2.
-    p_0 = prob_parity_even(probability_vector)
-    p_1 = 1.-p_0
     #parity_vector = (np.abs(np.sum(np_measurements,axis=0))/2)%2.0
     #unique, counts = np.unique(parity_vector, return_counts=True)
     #return counts/sum(counts)
-    return np.array([p_0,p_1])
+    return probability_vector
 
 
-def prob_parity_even(m):
-    p = 0.0
-    #all down
-    p+=(1.-m).prod()
-    #2 down 2 up
-    for i in range(len(m)):
-        for j in range(0,i):
-            a = np.zeros_like(m)
-            a[i]=1.
-            a[j]=1.
-            p+=(a-m).prod()
-            """copy_m = m
-            copy_m[i] = 1.-copy_m[i]
-            copy_m[j] = 1.-copy_m[j]
-            p+=copy_m.prod()"""
-
-    #all up
-    p+=m.prod()
-    return p
-
-def prob_parity_odd(m):
-    p=0.0
-    #3 up 1 down
-    for i in range(len(m)):
-        copy_m = m
-        copy_m[i] = 1. - copy_m[i]
-        p+=copy_m.prod()
-    #3 down 1 up
-    for i in range(len(m)):
-        copy_m = m
-        copy_m = 1.-copy_m
-        copy_m[i] = 1.-copy_m[i]
-        p += copy_m.prod()
-    return p
 
 def single_loss(model, w,x,y):
     prediction = get_parity_prediction(model, x,w)
