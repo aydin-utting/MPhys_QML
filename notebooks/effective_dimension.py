@@ -135,8 +135,8 @@ def effective_dimension(normed_fishers, n):
 import concurrent.futures
 
 data = create_data(10000)
-n_iters_tot = 10000
-num_threads = 20
+n_iters_tot = 1000
+num_threads = 40
 n_iters = n_iters_tot//num_threads
 
 all_w = []
@@ -149,11 +149,12 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         all_w+=ws
         all_fishers+=fishers
 
-
+print(len(all_fishers))
 
 #%%
 
-'''runs = 5
+'''
+runs = 5
 efs = pd.DataFrame(index=list(range(runs)), columns=list(range(10, 110, 10)))
 data = create_data(10000)
 
