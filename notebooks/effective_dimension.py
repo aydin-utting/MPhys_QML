@@ -168,3 +168,7 @@ for r in range(runs):
         efs.loc[r, n_iters] = ef.item()
 
 efs.to_csv('./effective_dimensions_20210219.csv')'''
+
+#%%
+
+df=pd.DataFrame(np.random.uniform(size=(10,3)),index=range(10),columns=['a','b','c'])
