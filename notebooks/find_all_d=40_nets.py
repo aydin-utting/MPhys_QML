@@ -113,8 +113,9 @@ class model:
 
     def __call__(self, x, w):
         pos = 0
-        for i, n in enumerate(self.sizes[:-1]):
+        for i in range(len(sizes[:-1])):
             x = F.linear(x, w[pos:pos + self.sizes[i] * self.sizes[i + 1]].view(self.sizes[i + 1], self.sizes[i]))
+            if i != len(sizes[:-1])-1: x = torch.sigmoid(x)
         return x
 
 X,Y = create_data(1000)
