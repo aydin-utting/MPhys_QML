@@ -28,7 +28,7 @@ def fisher(y, x):
     :param x: parameters which y(x) depends on
     :return: Fisher information matrix
     """
-    j = jacobian(y, x, create_graph=True)# CREATE NETWORK
+    j = jacobian(y, x, create_graph=True)
     j = j.detach().numpy()
     return torch.from_numpy(np.outer(j, j)).type(torch.DoubleTensor)
 
