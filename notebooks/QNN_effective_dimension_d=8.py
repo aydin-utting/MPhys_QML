@@ -118,6 +118,19 @@ def get_all_fishers(n_iter, depth):
         all_w[i] = w
     return all_fishers, all_w
 
+def effective_dimension(normed_fishers, n):
+    d = 8
+    V_theta = 1
+    gamma = 1
+    id = np.eye(d)
+    kappa = (gamma * n) / (2 * np.pi * np.log(n))
+    integral =  0.0
+    for F in normed_fishers:
+        integral += np.sqrt(np.linalg.det(id + kappa * F))
+
+    integral_over_volume = integral / (V_theta * len(normed_fishers))
+    numerator = np.log(integral_over_volume)
+    return 2 * numerator / np.log(kappa)
 
 def normalise_fishers(Fishers):
     num_samples = len(Fishers)
