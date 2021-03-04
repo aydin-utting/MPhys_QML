@@ -75,4 +75,3 @@ plt.show()
 
 plt.plot(range(epochs),epoch_loss.transpose())
 plt.show()
-
