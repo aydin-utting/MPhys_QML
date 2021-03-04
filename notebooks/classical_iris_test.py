@@ -32,6 +32,29 @@ def fisher(y, x):
     j = j.detach().numpy()
     return torch.from_numpy(np.outer(j, j)).type(torch.DoubleTensor)
 
+
+def normalise_fishers(Fishers, thetas, d, V):
+    num_samples = len(Fishers)
+
+    TrF_integral = (1 / num_samples) * torch.sum(torch.tensor([torch.trace(F) for F in Fishers]))
+    return [((d * V) / TrF_integral) * F for F in Fishers]
+
+
+# Function to calculate effective dimension
+def effective_dimension(normed_fishers, n):
+    d = 40
+    V_theta = 1
+    gamma = 1
+    id = torch.eye(d)
+    kappa = torch.tensor([(gamma * n) / (2 * np.pi * np.log(n))])
+    integral = torch.tensor([0.0])
+    for F in normed_fishers:
+        integral += torch.sqrt(torch.det(id + kappa * F))
+
+    integral_over_volume = integral / (V_theta * len(normed_fishers))
+    numerator = torch.log(integral_over_volume)
+    return 2 * numerator / torch.log(kappa)
+
 # Import Data
 df = pd.read_csv('../data/iris.data',names=['a','b','c','d','species'])
 df=df.query("species=='Iris-setosa' or species=='Iris-versicolor'")
@@ -41,11 +64,15 @@ X = Variable(torch.tensor(df.astype(float).values[:,0:4]).float())
 Y = Variable(torch.tensor(df.values.astype(int)[:,4]).long())
 
 
+
+
 # TRAIN
 runs = 50
 epochs = 100
 epoch_loss=np.empty((runs,epochs))
 
+all_fishers = []
+all_w = []
 for r in range(runs):
     net = nn.Linear(4, 2, bias=False)
     nn.init.uniform_(net.weight, -1., 1.)
@@ -62,16 +89,25 @@ for r in range(runs):
     #Fisher info
     Fisher = torch.zeros((8,8),requires_grad=True)
     w = net.weight.view(8, ).double()
+    all_w.append(w)
     for x,y in zip(X,Y):
-        pred=F.softmax(net(x.view(1,4)))
+        pred=net(x.view(1,4))
         loss = F.cross_entropy(pred,y.view(1,))
         Fisher=Fisher+fisher(loss,net.weight)
     Fisher=Fisher/len(X)
+    all_fishers.append(Fisher)
     FR = torch.matmul(w,torch.matmul(Fisher,w))
-    print(f'Fisher-Rao Norm: {FR.item()}, Final Loss: {epoch_loss[r,-1]:2f} ')
+    print(f"Final Loss: {epoch_loss[r,-1]:2f}, FR: {FR}")
+nF = normalise_fishers(all_fishers,all_w,8,1)
+
+FRs = np.array( [torch.matmul(all_w[i],torch.matmul(all_fishers[i],all_w[i])).item() for i in range(len(all_w))] )
+print(FRs.mean())
+
+"""
 plt.plot(range(epochs),epoch_loss.mean(axis=0))
 plt.fill_between(range(epochs),epoch_loss.mean(axis=0)-epoch_loss.std(axis=0),epoch_loss.mean(axis=0)+epoch_loss.std(axis=0),alpha=0.2)
 plt.show()
 
 plt.plot(range(epochs),epoch_loss.transpose())
 plt.show()
+"""
