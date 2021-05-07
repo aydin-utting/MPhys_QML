@@ -41,8 +41,8 @@ def normalise_fishers(Fishers, thetas, d, V):
 
 
 # Function to calculate effective dimension
-def effective_dimension(normed_fishers, n):
-    d = 40
+def effective_dimension(normed_fishers,n):
+    d = normed_fishers[0].size()[0]
     V_theta = 1
     gamma = 1
     id = torch.eye(d)
@@ -62,7 +62,6 @@ df.replace('Iris-setosa',0,inplace=True)
 df.replace('Iris-versicolor',1,inplace=True)
 X = Variable(torch.tensor(df.astype(float).values[:,0:4]).float())
 Y = Variable(torch.tensor(df.values.astype(int)[:,4]).long())
-
 
 
 
@@ -111,3 +110,21 @@ plt.show()
 plt.plot(range(epochs),epoch_loss.transpose())
 plt.show()
 """
+'''
+m_list = []
+for s in S:
+    m = '{'
+    for r in s:
+
+        m+='{'+str(r.tolist())[1:-1]+'}'
+        m+=','
+    m = m[:-1]
+    m+='}'
+    m_list.append(m)
+
+M_STR='{'
+for M in m_list:
+    M_STR+=M+','
+M_STR = M_STR[:-1]
+M_STR+='}'
+'''
