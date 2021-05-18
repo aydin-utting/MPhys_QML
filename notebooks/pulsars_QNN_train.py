@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
-
+from sklearn.preprocessing import minmax_scale
 
 #PennyLane for QNN
 import pennylane as qml
@@ -25,14 +25,15 @@ from tqdm.auto import tqdm
 seed = 13
 
 #number of training samples per batch
-n_train = 50
+n_train = 100
 
 #how many validation batches
-n_batch_val = 5
+n_batch_val = 1
 
-# load IRIS dataset
-dataset = pd.read_csv('pulsar.csv')
-
+# load PULSARS dataset
+dataset = pd.read_csv('../data/HTRU_2.csv')
+for k in dataset[dataset.columns[0:8]]:
+    dataset[k] = minmax_scale(dataset[k], feature_range=(0.,2.*np.pi))
 data0 = dataset[dataset[dataset.columns[8]]==0]
 data0 = data0.sample(n=int((n_batch_val+1)*n_train/2),random_state=seed)
 X0 = data0[data0.columns[0:8]].values
@@ -204,10 +205,10 @@ def quantum_model_train(train_X,train_Y,all_validation_X=None,all_validation_Y=N
         
         np_measurements = (quantum_neural_network(x,w)+1.)/2.
         
-        return np.array([1.-np_measurements,np_measurements])
+        return np.array([np_measurements,1.-np_measurements])
     
     def average_loss(w, data):
-        cost_value = 0
+        cost_value = 0.
         for i,(x, y) in enumerate(data):
            
             cost_value += single_loss(w,x,y)
@@ -225,41 +226,46 @@ def quantum_model_train(train_X,train_Y,all_validation_X=None,all_validation_Y=N
 
     
     #initialise weights
-    w = np.array(np.split(np.random.uniform(size=(16,),low=-1,high=1),2),requires_grad=True)
+    w = np.array(np.split(np.random.uniform(size=(16,),low=-1.,high=1.),2),requires_grad=True)
+    ws = np.zeros((num_epochs,w.shape[0],w.shape[1]))
     learning_rate=0.1
     train_losses = np.zeros((num_epochs,1))
     validation_losses = np.zeros((num_epochs,all_validation_X.shape[0]))
     #Optimiser
     optimiser = AdamOptimizer(learning_rate)
-    for i in range(num_epochs):
-      w, train_loss_value = optimiser.step_and_cost(lambda v: average_loss(v, train_data), w)
-      w.requires_grad=False
-      val_losses = np.array([])
-      for validation_data in all_validation_data:
-          validation_loss_value = average_loss(w, validation_data)
-          val_losses= np.append(validation_loss_value,val_losses)
-      validation_losses[i] = val_losses
-      w.requires_grad=True      
-      train_losses[i][0] = train_loss_value
-      if i%5==0:
-          print("Epoch = ",i, " Training Loss = ",train_loss_value," Validation Loss = ",np.mean(val_losses)," Validation Loss Std = ",np.std(val_losses))
+    pbar = tqdm(range(num_epochs))
+    for i in pbar:
+        w, train_loss_value = optimiser.step_and_cost(lambda v: average_loss(v, train_data), w)
+        ws[i] = w
+      # w.requires_grad=False
+      # val_losses = np.array([])
+      # for validation_data in all_validation_data:
+      #     validation_loss_value = average_loss(w, validation_data)
+      #     val_losses= np.append(validation_loss_value,val_losses)
+      # validation_losses[i] = val_losses
+      # w.requires_grad=True
+        train_losses[i][0] = train_loss_value
+        pbar.set_postfix({"Train Loss" : train_loss_value})
+      #if i%5==0:
+       #   print("Epoch = ",i, " Training Loss = ",train_loss_value," Validation Loss = ",np.mean(val_losses)," Validation Loss Std = ",np.std(val_losses))
       
       
     
-    return np.append(validation_losses,train_losses,axis=1)
+    return np.append(validation_losses,train_losses,axis=1),ws
 
 
-n_iteration = 5
-variations = ['RYRX','RYRY']
-depths=[0,1,2,3,4,5]
+n_iteration = 1
+variations = ['RYRY']
+depths=[2]
 qnn_loss= np.zeros((len(depths),len(variations),n_iteration,num_epochs,n_batch_val+1))
 ann_loss= np.zeros((n_iteration,num_epochs,n_batch_val+1))
+weights = np.zeros((len(depths),len(variations),n_iteration,num_epochs,2,8))
 for i in range(n_iteration):
-    ann_loss[i] = classical_train(train_X,train_Y,all_validation_X,all_validation_Y)
+    #ann_loss[i] = classical_train(train_X,train_Y,all_validation_X,all_validation_Y)
     for j,variation in enumerate(variations):
         for k,depth in enumerate(depths):
             print("depth= ",depth, " iteration= ", i, " variation=",variation)
-            qnn_loss[k][j][i] = quantum_model_train(train_X,train_Y,all_validation_X,all_validation_Y,depth=depth,variation=variation)
-            
+            qnn_loss[k][j][i],weights[k][j][i] = quantum_model_train(train_X,train_Y,all_validation_X,all_validation_Y,depth=depth,variation=variation)
+            np.save(open("../data/qnn_pulsars_train_test.data", "wb"), qnn_loss)
             
             

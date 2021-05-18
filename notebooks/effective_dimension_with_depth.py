@@ -208,9 +208,8 @@ def get_all_fishers(n_iter, depth=2, variation="RYRY"):
 
 
 def normalise_fishers(Fishers):
-    num_samples = len(Fishers)
-    TrF_integral = (1 / num_samples) * np.sum([np.trace(F) for F in Fishers])
-    return [((DIM) / TrF_integral) * F for F in Fishers]
+    TrF_integral = Fishers.trace(axis1=1,axis2=2).mean()
+    return (DIM/TrF_integral) * Fishers
 
 
 def effective_dimension_good(normed_fishers, n_data):
@@ -228,7 +227,6 @@ def effective_dimension_good(normed_fishers, n_data):
     return 2 * numerator / np.log(kappa)
 
 def effective_dimension(normed_fishers, n_data : int):
-    normed_fishers = np.array(normed_fishers)
     id = torch.eye(DIM)
     kappa = (n_data) / (2 * np.pi * np.log(n_data))
     FHat = id + kappa * normed_fishers
@@ -259,17 +257,17 @@ def get_effective_dimension(depth=2, variation="RYRY", n_iter=5, n_data=1000):
     d_eff = effective_dimension(normalised_fishers,n_data)
     return d_eff
 
-repeats = 1
-depths = [5]
-n_iters = 5
+repeats = 3
+depths = [0,1,2,3,4,5]
+n_iters = 10
 n_data = len(train_X)
-variations = ["RYRY"]
+variations = ["RYRY","RYRX"]
 depth_effective_dimensions = { k: {dd : [0.0 for _ in range(repeats)] for dd in depths} for k in variations}
 for r in range(repeats):
     for depth in depths:
         for vv,variation in enumerate(variations):
             depth_effective_dimensions[variation][depth][r] = get_effective_dimension(depth,variation,n_iters,n_data)
-            pk.dump(depth_effective_dimensions,open("../data/depth_effective_dimensions_test.data","wb"))
+            pk.dump(depth_effective_dimensions,open("../data/depth_effective_dimensions_IRIS.data","wb"))
             print(f"{variation} Depth: {depth} d_eff = {depth_effective_dimensions[variation][depth][r]}")
 
 #NOTE NEED TO CHANGE quantum_neural_network

@@ -52,7 +52,7 @@ def initialise_data(n_samples):
 
 
 # ----------------------------------------QUANTUM NN-------------------------------------------------
-data = initialise_data(100)
+
 
 
 
@@ -93,8 +93,12 @@ def quantum_neural_network(x, w, depth ,variation):
 
         qml.broadcast(qml.CNOT, wires=range(S_IN), pattern="all_to_all")
 
-    for i in range(4):
-        qml.RY(w[L-1][i], wires=i)
+    if variation == "RYRY":
+        for i in range(4):
+            qml.RY(w[L-1][i], wires=i)
+    elif variation == "RYRX":
+        for i in range(4):
+            qml.RX(w[L-1][i], wires=i)
 
 
     dev.shots = 10000
@@ -131,7 +135,7 @@ def average_loss(w, data, depth : int, variation : str):
     return c / len(data), Fisher / len(data)
 
 
-def get_all_fishers(n_iter : int, depth : int, variation : str):
+def get_all_fishers(n_iter : int, depth : int, variation : str,data):
     all_fishers = np.zeros((n_iter, DIM, DIM))
     pbar = tqdm(range(n_iter), desc=f"{variation} Depth: {depth} ", leave=False)
     for i in pbar:
@@ -181,23 +185,23 @@ def get_entropy(depth : int, variation : str, n_iter : int, bins : int):
             entropy -= i * np.log(i)
     return entropy
 
-def get_effective_dimension(depth : int, variation : str, n_iter : int, n_data : int):
-    all_fishers = get_all_fishers(n_iter, depth, variation)
+def get_effective_dimension(depth : int, variation : str, n_iter : int, data):
+    all_fishers = get_all_fishers(n_iter, depth, variation,data)
     normalised_fishers = normalise_fishers(all_fishers)
-    d_eff = effective_dimension(normalised_fishers,n_data)
-    return d_eff
+    d_eff = effective_dimension(normalised_fishers,len(data))
+    return d_eff.item()
 
 if __name__ == '__main__':
-
-    repeats = 1
+    n_data = [10, 20, 50, 100, 250, 500, 750, 1000]
+    variations = ["RYRX"]
     depths = [5]
+    repeats = len(n_data)
     n_iters = 5
-    n_data = len(data)
-    variations = ["RYRY"]
     depth_effective_dimensions = { k: {dd : [0.0 for _ in range(repeats)] for dd in depths} for k in variations}
     for r in range(repeats):
+        data = initialise_data(n_data[r])
         for depth in depths:
             for vv,variation in enumerate(variations):
-                depth_effective_dimensions[variation][depth][r] = get_effective_dimension(depth,variation,n_iters,n_data)
-                pk.dump(depth_effective_dimensions,open("../data/depth_effective_dimensions_temp.data","wb"))
+                depth_effective_dimensions[variation][depth][r] = get_effective_dimension(depth,variation,n_iters,data)
+                pk.dump(depth_effective_dimensions,open("../data/depth_effective_dimensions_gauss_NDATA_5.data","wb"))
                 print(f"{depth_effective_dimensions[variation][depth][r]}")
