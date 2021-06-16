@@ -4,6 +4,8 @@
 This repo contains the code I used for my second semester MPhys project.
 It has not been edited to be readable or usable to third parties (yet).
 
+You can also read my report `mphys_sem2_report.pdf` to see the results of my work.
+
 Important files are `depth_effective_dimension.py` and its derivative files `clouds_effective_dimension` and `pulsars_effective_dimension`.
 These can be run to produce the effective dimension with depth for IRIS, Gaussian Clouds and Pulsars.
 
